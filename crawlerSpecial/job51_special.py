@@ -14,7 +14,7 @@ job_area_address = os.path.join(data_address, 'job_area')
 # jobarea起始url，010000（北京）
 jobarea_start_url = 'http://m.51job.com/search/joblist.php?keyword=+&keywordtype=2&funtype=0000&indtype=32&jobarea=010000&jobterm=99&cotype=99&issuedate=9&saltype=99&degree=99&landmark=0&workyear=99&cosize=99&radius=-1&lonlat=0%2C0&pageno=1'
 # large_area中的工作数上限，等于上限则需要分区请求
-large_area_job_num_ceiling = 100000
+area_job_num_ceiling = 100000
 
 
 # 依据网页链接获取Ajax动态添加的json数据的url
@@ -53,20 +53,10 @@ def get_next_page_url(url):
     return next_page_url
 
 
-# 由当前area_code获取下一个area_code,针对大的区域，即修改前2个数字
-# 输入：当前area_code,如010000
-# 输出：下一个area_code，如020000
-def next_large_area_code(area_code):
-    next_area_code = str(int(area_code) + 10000)
-    if len(next_area_code) == 5:
-        next_area_code = '0' + next_area_code
-    return next_area_code
-
-
-# 由大区域area_code得到首个小区域area_code
+# 由大区域area_code得到首个中区域area_code
 # 输入：大区域area_code
-# 输出：小区域area_code
-def small_area_begin_code(area_code):
+# 输出：中区域area_code
+def middle_area_begin_code(area_code):
     if int(area_code) % 10000:
         print('error area code', area_code)
         raise ValueError("传递的large_area_code不正确，后4位应该都为0")
@@ -78,11 +68,42 @@ def small_area_begin_code(area_code):
     return begin_area_code
 
 
-# 由当前area_code获取下一个area_code,针对大的区域，即修改前2个数字
+# 由中区域area_code得到首个小区域area_code
+# 输入：中区域area_code
+# 输出：小区域area_code
+def small_area_begin_code(area_code):
+    if int(area_code) % 100:
+        print('error area code', area_code)
+        raise ValueError("传递的middle_area_code不正确，后2位应该都为0")
+    begin_area_code = area_code[0:4] + '01'
+    return begin_area_code
+
+
+# 由当前area_code获取下一个area_code,针对大区域，即修改1-2二个数字
 # 输入：当前area_code,如010000
 # 输出：下一个area_code，如020000
-def next_small_area_code(area_code):
+def next_large_area_code(area_code):
+    next_area_code = str(int(area_code) + 10000)
+    if len(next_area_code) == 5:
+        next_area_code = '0' + next_area_code
+    return next_area_code
+
+
+# 由当前area_code获取下一个area_code,针对中区域，即修改3-4二个数字
+# 输入：当前area_code,如010500
+# 输出：下一个area_code，如010600
+def next_middle_area_code(area_code):
     next_area_code = str(int(area_code) + 100)
+    if len(next_area_code) == 5:
+        next_area_code = '0' + next_area_code
+    return next_area_code
+
+
+# 由当前area_code获取下一个area_code,针对小的区域，即修改5-6二个数字
+# 输入：当前area_code,如010503
+# 输出：下一个area_code，如010504
+def next_small_area_code(area_code):
+    next_area_code = str(int(area_code) + 1)
     if len(next_area_code) == 5:
         next_area_code = '0' + next_area_code
     return next_area_code
