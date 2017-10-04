@@ -17,18 +17,6 @@ jobarea_start_url = 'http://m.51job.com/search/joblist.php?keyword=+&keywordtype
 area_job_num_ceiling = 100000
 
 
-# 依据网页链接获取Ajax动态添加的json数据的url
-# 输入：当前网页的url
-# 返回：网页动态加载对应的json数据的链接列表
-def get_ajax_url(url):
-    base_page_no = get_page_no(url)
-    if base_page_no == 1:
-        url += "&pageno=1"
-    ajax_urls = [re.sub('pageno=\d+', "pageno=%d" % i, url) for i in range(base_page_no + 1, base_page_no + 10)]
-    ajax_urls = [url.replace(".com/search/joblist.php", ".com/ajax/search/joblist.ajax.php") for url in ajax_urls]
-    return ajax_urls
-
-
 # 获取网页url中的pageno
 # 输入：当前页面的url
 # 返回：当前页面的额pageno
@@ -109,9 +97,63 @@ def next_small_area_code(area_code):
     return next_area_code
 
 
-# 利用area的job数量得到job占据的页面数
+# 利用area的job数量得到的大致的页面数，以1结尾，如121
+# 最后页面数（如121）构造成的url的页面通过动态加载可以包括所有剩下的数据
 # 输入：某area的job数量
 # 输出：job占据的页面数
-def get_pageno_from_job_num(job_num):
+def approximate_pageno_from_job_num(job_num):
     pageno = int(job_num / 300) * 10 + 1
     return pageno
+
+
+# 依据url获取Ajax动态添加的json数据的url
+# 输入：某一url(pageno以1结尾的网页)
+# 返回：网页动态加载对应的json数据的链接列表(pageno结尾从2到10)
+def get_ajax_url_from_start_url(url):
+    base_page_no = get_page_no(url)
+    if base_page_no == 1:
+        url += "&pageno=1"
+    ajax_urls = [re.sub('pageno=\d+', "pageno=%d" % i, url) for i in range(base_page_no + 1, base_page_no + 10)]
+    ajax_urls = [url.replace(".com/search/joblist.php", ".com/ajax/search/joblist.ajax.php") for url in ajax_urls]
+    return ajax_urls
+
+
+# 基于area_code获取start_urls
+# 输入：area_code
+# 输出：不同区域的start_urls
+# def get_start_urls_from_area_code():
+#     start_urls = list()
+#     加载区域码和工作数
+    # code_num_dict = load_area_code_and_job_num()
+    # 构造start_urls
+    # for code in code_num_dict.keys():
+    #     job_num = code_num_dict[code]
+    #     approximate_page_num = approximate_pageno_from_job_num(job_num)
+    #     只使用以1结尾的pageno发送请求（网站特点）
+    #     通过动态加载可以加载剩余9页的数据
+        # for pageno in range(1, approximate_page_num, 10):
+        #     start_url = construct_url_upon_code_and_pageno(code, pageno)
+        #     start_urls.append(start_url)
+    # return start_urls
+
+
+# 从本地加载area_code和job_num
+# 输入：无
+# 输出：area_code：job_num字典
+# 数据库准备好后直接从数据库加载
+def load_area_code_and_job_num():
+    with open(job_area_address, 'r')as f:
+        area_code_and_num = [(line.split()[0], line.split()[2]) for line in f.readlines()]
+    area_code_and_num_dict = dict()
+    # 以code为键，，num为值组建字典
+    for item in area_code_and_num:
+        area_code_and_num_dict[item[0]] = int(item[1])
+    return area_code_and_num_dict
+
+
+# 基于code和pageno构造url
+# 输入：区域code和页数
+def construct_url_upon_code_and_pageno(code, pageno):
+    url_change_code = re.sub('jobarea=\d+', 'jobarea=%s' % code, jobarea_start_url)
+    target_url = re.sub('pageno=\d+', 'pageno=%d' % pageno, url_change_code)
+    return target_url

@@ -103,6 +103,11 @@ PROXY_DB = 'proxy'
 # 全部代理的表名
 total_proxy_table = 'total_proxy'
 
+# job51 database
+JOB51_DB = 'job51'
+# 记录不同区域码、区域名和区域工作数的表名
+area_table = 'area'
+
 # 每个代理请求次数
 RETRY_TIMES = 3
 

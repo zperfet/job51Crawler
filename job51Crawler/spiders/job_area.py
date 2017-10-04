@@ -5,6 +5,7 @@ from crawlerSpecial.job51_special import *
 import re
 from job51Crawler.settings import *
 import logging
+from job51Crawler.items import *
 
 
 class JobareaSpider(Spider):
@@ -81,11 +82,16 @@ class JobareaSpider(Spider):
             # 工作数字小于100000的直接保留large_area的name和code即可
             elif 0 < large_area_job_num < area_job_num_ceiling:
                 print("%s不需要分区请求（%d）" % (area_name, large_area_job_num))
-                # 对应区域的工作数占据的总页数
-                area_pageno = get_pageno_from_job_num(large_area_job_num)
-                print('保存的大区域', area_name, area_code)
+                print('保存的大区域', area_name, area_code, large_area_job_num)
+                # 将数据保存到item中yield，传递到pipelines中进行处理
+                area_item = Job51AreaItem()
+                area_item['area_code'] = area_code
+                area_item['area_name'] = area_name
+                area_item['area_job_num'] = large_area_job_num
+                yield area_item
+                # 将数据保存到本地，测试用，数据库稳定后可删除
                 with open(job_area_address, 'a', encoding='utf-8')as f:
-                    f.write(area_code + ' ' + area_name + ' ' + str(area_pageno) + '\n')
+                    f.write(area_code + ' ' + area_name + ' ' + str(large_area_job_num) + '\n')
             else:
                 raise ValueError('large_area_job_num数字%s有问题，应该在0~%s之间' %
                                  (large_area_job_num, area_job_num_ceiling))
@@ -137,11 +143,16 @@ class JobareaSpider(Spider):
                               )
             elif 0 < middle_area_job_num < area_job_num_ceiling:
                 print("%s不需要分区请求（%d）" % (area_name, middle_area_job_num))
-                print('保存的中区域', area_name, area_code)
-                # 对应区域的工作数占据的总页数
-                area_pageno = get_pageno_from_job_num(middle_area_job_num)
+                print('保存的中区域', area_name, area_code, middle_area_job_num)
+                # 将数据保存到item中yield，传递到pipelines中进行处理
+                area_item = Job51AreaItem()
+                area_item['area_code'] = area_code
+                area_item['area_name'] = area_name
+                area_item['area_job_num'] = middle_area_job_num
+                yield area_item
+                # 将数据保存到本地，测试用，数据库稳定后可删除
                 with open(job_area_address, 'a', encoding='utf-8')as f:
-                    f.write(area_code + ' ' + area_name + ' ' + str(area_pageno) + '\n')
+                    f.write(area_code + ' ' + area_name + ' ' + str(middle_area_job_num) + '\n')
             else:
                 raise ValueError('middle_area_job_num数字%s有问题，应该在0~%s之间' %
                                  (middle_area_job_num, area_job_num_ceiling))
@@ -160,10 +171,17 @@ class JobareaSpider(Spider):
             self.small_area[area_code] = area_name
             # 获取每个小区域的工作数
             small_area_job_num = int(response.selector.xpath('//p[@class="result"]/span/text()').extract()[0])
-            area_pageno = get_pageno_from_job_num(small_area_job_num)
+            print('保存的小区域', area_name, area_code, small_area_job_num)
+            # 将数据保存到item中yield，传递到pipelines中进行处理
+            area_item = Job51AreaItem()
+            area_item['area_code'] = area_code
+            area_item['area_name'] = area_name
+            area_item['area_job_num'] = small_area_job_num
+            yield area_item
+            # 将数据保存到本地，测试用，数据库稳定后可删除
             with open(job_area_address, 'a', encoding='utf-8')as f:
-                f.write(area_code + ' ' + area_name + ' ' + str(area_pageno) + '\n')
-            print('保存的小区域', area_name, ' ', area_code)
+                f.write(area_code + ' ' + area_name + ' ' + str(small_area_job_num) + '\n')
+
             next_small_area_url = re.sub('jobarea=\d{6}', 'jobarea=%s' %
                                          next_small_area_code(area_code), response.url)
             yield Request(url=next_small_area_url,
@@ -173,7 +191,7 @@ class JobareaSpider(Spider):
                           meta={'origin_callback': self.parse_small_area},
                           )
 
-    # 大区域解析错误处理
+    # 解析错误处理
     def error_parse(self, failure):
         # 报告错误
         self.logger.error(repr(failure))
