@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 from scrapy import Spider, Request
 from crawlerSpecial.job51_special import *
@@ -15,7 +16,7 @@ class Job51UrlSpider(Spider):
         # 加载区域码和工作数
         code_num_dict = load_area_code_and_job_num()
         # 构造start_urls
-        for code in code_num_dict.keys():
+        for code in list(code_num_dict.keys()):
             job_num = code_num_dict[code]
             approximate_page_num = approximate_pageno_from_job_num(job_num)
             # 只使用以1结尾的pageno发送请求（网站特点）
@@ -41,11 +42,37 @@ class Job51UrlSpider(Spider):
 
     # 对普通页面的job的url进行收集
     def parse(self, response):
-        pass
+        # 解析网页中的job_urls
+        job_urls = response.selector.xpath("//a[@class='e e2 eck']/@href").extract()
+        # 从job_urls中提取job_ids
+        job_ids = get_job_id_from_url(job_urls)
+        if len(job_ids):
+            with open(job_ids_address, 'a')as f:
+                ids = '\n'.join(job_ids) + '\n'
+                f.write(ids)
+            print('将%d个job_ids保存到本地' % len(job_ids))
 
     # 解析动态加载的ajax数据中的job_url
-    def parse_ajax(self):
-        pass
+    def parse_ajax(self, response):
+        try:
+            data = json.loads(response.text)
+        except Exception as e:
+            print('error while loads response.txt of url:\n', response.url)
+            print('retry...')
+            yield Request(response.url,
+                          callback=self.parse_ajax,
+                          errback=self.error_parse,
+                          dont_filter=True,
+                          meta={'origin_callback': self.parse_ajax},
+                          )
+            return
+        data = data['data']
+        job_ids = [job['jobid'] for job in data]
+        if len(job_ids):
+            with open(job_ids_address, 'a')as f:
+                ids = '\n'.join(job_ids) + '\n'
+                f.write(ids)
+            print('将%d个job_ids保存到本地' % len(job_ids))
 
     # 解析错误处理
     def error_parse(self, failure):
@@ -60,7 +87,6 @@ class Job51UrlSpider(Spider):
                 self.failed_url[url] += 1
                 # 重新发送请求，因为可能是代理问题，重新发送后代理已经切换
                 yield Request(url,
-                              # callback=self.parse,
                               callback=request.meta['origin_callback'],
                               errback=self.error_parse,
                               dont_filter=True,

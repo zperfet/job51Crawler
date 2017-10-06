@@ -7,10 +7,10 @@ data_address = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 normal_page_job_num = 30
 # 具体工作的模板链接，最后添加上jobid即可
 job_base_url = "http://m.51job.com/search/jobdetail.php?jobtype=0&jobid="
-# 工作url本地保存地址
-job_url_address = os.path.join(data_address, 'job_url')
+# 工作id本地保存地址
+job_ids_address = os.path.join(data_address, 'job_ids.txt')
 # jobarea数据保存地址
-job_area_address = os.path.join(data_address, 'job_area')
+job_area_address = os.path.join(data_address, 'job_area.txt')
 # jobarea起始url，010000（北京）
 jobarea_start_url = 'http://m.51job.com/search/joblist.php?keyword=+&keywordtype=2&funtype=0000&indtype=32&jobarea=010000&jobterm=99&cotype=99&issuedate=9&saltype=99&degree=99&landmark=0&workyear=99&cosize=99&radius=-1&lonlat=0%2C0&pageno=1'
 # large_area中的工作数上限，等于上限则需要分区请求
@@ -124,17 +124,17 @@ def get_ajax_url_from_start_url(url):
 # def get_start_urls_from_area_code():
 #     start_urls = list()
 #     加载区域码和工作数
-    # code_num_dict = load_area_code_and_job_num()
-    # 构造start_urls
-    # for code in code_num_dict.keys():
-    #     job_num = code_num_dict[code]
-    #     approximate_page_num = approximate_pageno_from_job_num(job_num)
-    #     只使用以1结尾的pageno发送请求（网站特点）
-    #     通过动态加载可以加载剩余9页的数据
-        # for pageno in range(1, approximate_page_num, 10):
-        #     start_url = construct_url_upon_code_and_pageno(code, pageno)
-        #     start_urls.append(start_url)
-    # return start_urls
+# code_num_dict = load_area_code_and_job_num()
+# 构造start_urls
+# for code in code_num_dict.keys():
+#     job_num = code_num_dict[code]
+#     approximate_page_num = approximate_pageno_from_job_num(job_num)
+#     只使用以1结尾的pageno发送请求（网站特点）
+#     通过动态加载可以加载剩余9页的数据
+# for pageno in range(1, approximate_page_num, 10):
+#     start_url = construct_url_upon_code_and_pageno(code, pageno)
+#     start_urls.append(start_url)
+# return start_urls
 
 
 # 从本地加载area_code和job_num
@@ -157,3 +157,26 @@ def construct_url_upon_code_and_pageno(code, pageno):
     url_change_code = re.sub('jobarea=\d+', 'jobarea=%s' % code, jobarea_start_url)
     target_url = re.sub('pageno=\d+', 'pageno=%d' % pageno, url_change_code)
     return target_url
+
+
+# 从job_url中获取job_id
+# 输入：job_url列表或者单个job_url
+# 输出：job_id列表或者单个job_id
+def get_job_id_from_url(job_urls):
+    if isinstance(job_urls, list or tuple or set):
+        job_ids = list()
+        for url in job_urls:
+            try:
+                job_id = re.findall('jobid=(\d+)', url)[0]
+                job_ids.append(job_id)
+            except IndexError as e:
+                print('%s不是工作链接，没有job_id', e)
+        return job_ids
+    elif isinstance(job_urls, str):
+        try:
+            job_id = re.findall('jobid=(\d+)', job_urls)[0]
+            return job_id
+        except IndexError as e:
+            print('%s不是工作链接，没有job_id', e)
+    else:
+        print('传递类型有误', type(job_urls))

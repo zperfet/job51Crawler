@@ -153,5 +153,6 @@ class RandomProxyMiddleware(object):
             except KeyError:
                 pass
 
+
     def close_spider(self):
         print('end middlewares')
